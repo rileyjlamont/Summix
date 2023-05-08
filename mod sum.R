@@ -254,8 +254,9 @@ mergeframe2[,4:ncol(mergeframe2)] <- sapply(mergeframe2[,4:ncol(mergeframe2)],as
 R_sum_mod = mod_summix(mergeframe2, reference = c(paste("EUR"), paste("AFR")), observed = "obs") 
 R_sum_test = summix(mergeframe2, reference = c(paste("EUR"), paste("AFR")), observed = "obs") 
 
-R_sum_mod$objective <- R_sum_mod$objective*(1000/(nrow(mergeframe2)))
-R_sum_test$objective <- R_sum_test$objective*(1000/(nrow(mergeframe2)))
+##((commented out below, used to need to find loss/1k SNPs but new Summix loss does that for me))
+##R_sum_mod$objective <- R_sum_mod$objective*(1000/(nrow(mergeframe2))) 
+##R_sum_test$objective <- R_sum_test$objective*(1000/(nrow(mergeframe2)))
 
 frame_mod[i, ] = R_sum_mod
 frame_test[i, ] = R_sum_test
@@ -271,142 +272,6 @@ tmp3<-paste("20221230_Test_Sum_POP1EUR", eur_pop, "_Pop2AFR", afr_pop, "_POPuEAS
 write.csv(frame_mod, file=paste("~/Desktop/Unknown Ancestry Simulations/Mod_Summix_Sims/", tmp2, ".csv", sep=""))
 write.csv(frame_test, file=paste("~/Desktop/Unknown Ancestry Simulations/Mod_Summix_Sims/", tmp3, ".csv", sep=""))
 }
-
-# frame_mod = data.frame(matrix(nrow = 100, ncol = 7))
-# frame_test = data.frame(matrix(nrow = 100, ncol = 7))
-# 
-# #macrovariables
-# N = 100000 #total sample size
-# pop1_Nloop = c(1:9)*1000 #first fixed prop
-# 
-# prop_missing = .33333333333
-# 
-# 
-# #for(h in 1:length(pop1_Nloop)){
-#   for(i in 1:100){
-#     
-#     ssample = subframe %>% 
-#       sample_n(100000)
-#     
-#     #create observed European, 45%
-#     eur_name = "AF_EUR"
-#     eur_pop = 17500
-#     #eur_pop = pop1_Nloop[h]
-#     
-#     eur_geno = t(sapply(ssample[[eur_name]], function(x){x2<-as.numeric(x); rmultinom(1, eur_pop, prob=(c(x2**2, 2*x2*(1-x2), (1-x2)**2)))}))
-#     eur_dat = data.frame(AC = 2*eur_geno[,1] + eur_geno[,2],
-#                          AN = 2*eur_pop) %>% 
-#       mutate(AF = AC / AN)
-#     
-#     #create observed EAS, 45%
-#     afr_name = "AF_AFR"
-#     afr_pop =  80000
-#     
-#     afr_geno = t(sapply(ssample[[afr_name]], function(x){x2<-as.numeric(x); rmultinom(1, afr_pop, prob=(c(x2**2, 2*x2*(1-x2), (1-x2)**2)))}))
-#     afr_dat = data.frame(AC = 2*afr_geno[,1] + afr_geno[,2],
-#                          AN = 2*afr_pop) %>% 
-#       
-#       mutate(AF = AC / AN)
-#     
-#     
-#     #create observed African, 10%
-#     eas_name = "AF_EAS"
-#     eas_pop = 2500
-#     
-#     eas_geno = t(sapply(ssample[[eas_name]], function(x){x2<-as.numeric(x); rmultinom(1, eas_pop, prob=(c(x2**2, 2*x2*(1-x2), (1-x2)**2)))}))
-#     eas_dat = data.frame(AC = 2*eas_geno[,1] + eas_geno[,2],
-#                          AN = 2*eas_pop) %>% 
-#       
-#       mutate(AF = AC / AN)
-#     
-#     #combined observed population
-#     combsubset = data.frame(AC = afr_dat$AC + eur_dat$AC + eas_dat$AC,
-#                             AN = afr_dat$AN + eur_dat$AN + eas_dat$AN) %>% 
-#       mutate(AF = AC / AN)
-#     
-#     #remove AFR
-#     sumframe2 = data.frame(POS = ssample$POS,
-#                            REF = ssample$REF,
-#                            ALT = ssample$ALT,
-#                            ref_eur = ssample$AF_EUR,
-#                            ref_eas = ssample$AF_EAS,
-#                            obs = combsubset$AF)
-#     
-#     
-#     anc_list <- c("AFR", "EUR", "IAM", "SAS", "EAS")
-#     
-#     N_EUR = 500
-#     N_AFR = 500
-#     N_IAM = 500
-#     N_SAS = 500
-#     N_EAS = 500
-#     
-#     
-#     AncFrame <- c('AFR', 'EUR', 'IAM', 'SAS', 'EAS')
-#     ancvec = AncFrame
-#     ancnum = length(ancvec)
-#     
-#     ####Simulate new reference data based on N individuals per real populations in HGDP and 1KG###########
-#     
-#     #Real data sample sizes
-#     sample_N <- c(paste(rep("N_", each = length(anc_list)), anc_list, sep = ""))
-#     sample_counts <- as.data.frame(lapply(sample_N, get))
-#     
-#     refdat = ssample %>% 
-#       select(CHROM, POS, REF, ALT, paste(rep("AF_", each = length(anc_list)), anc_list, sep="")) 
-#     names(refdat) <- gsub("AF_", "", names(refdat))
-#     
-#     
-#     #loop
-#     refsims = as.data.frame(matrix(0, nrow = nrow(refdat), ncol = length(anc_list)))   
-#     for (k in 1:ancnum){
-#       refsimcount = t(sapply(refdat[[as.character(ancvec[k])]], function(x){x2<-as.numeric(x); rmultinom(1, as.numeric(sample_counts[k]), prob=(c(x2**2, 2*x2*(1-x2), (1-x2)**2)))}))
-#       refsim = (2 * refsimcount[,1] + refsimcount[,2]) / (2 * as.numeric(sample_counts[k]))
-#       refsims[,k] = refsim
-#     }
-#     
-#     refdat_sim <- as.data.frame(cbind(refdat[,1], refdat[,2], refdat[,3], refdat[,4], refsims))
-#     names(refdat_sim) <- c("CHROM", "POS", "REF", "ALT", anc_list)
-#     refdat_sim_flt <- refdat_sim %>% 
-#       filter(.99 > refdat_sim[,5:ncol(refdat_sim)] & refdat_sim[,5:ncol(refdat_sim)] > .01) 
-#     
-#     rm(refdat_sim)
-#     gc()
-#     
-#     # Pull reference data
-#     refdatm = refdat_sim_flt %>% 
-#       select(POS, REF, ALT, all_of(anc_list))
-#     
-#     # Set Observed data
-#     obsvecm = sumframe2 %>% 
-#       select(POS, REF, ALT, obs)
-#     
-#     # Merge reference and observed
-#     mergeframe2 = merge(refdatm, obsvecm, by = c("POS","REF","ALT")) %>% 
-#       select(POS, REF, ALT, all_of(anc_list), obs)
-#     mergeframe2[,4:ncol(mergeframe2)] <- sapply(mergeframe2[,4:ncol(mergeframe2)],as.numeric)
-#     
-#     R_sum_mod = mod_summix(mergeframe2, reference = c(paste("EAS"), paste("EUR")), observed = "obs") 
-#     R_sum_test = summix(mergeframe2, reference = c(paste("EAS"), paste("EUR")), observed = "obs") 
-#     
-#     R_sum_mod$objective <- R_sum_mod$objective*(1000/(nrow(mergeframe2)))
-#     R_sum_test$objective <- R_sum_test$objective*(1000/(nrow(mergeframe2)))
-#     
-#     frame_mod[i, ] = R_sum_mod
-#     frame_test[i, ] = R_sum_test
-#     
-#     colnames(frame_mod) = c("Objective", "Iterations", "Time", "Filtered", "EAS", "EUR")
-#     colnames(frame_test) = c("Objective", "Iterations", "Time", "Filtered", "EAS", "EUR")
-#     
-#     #tmp2<-paste("20230219_Mod_Sum_Pop1EAS", eur_pop, "_Pop2AFR", afr_pop, "_POPuEUR", eas_pop, sep="")
-#     #tmp3<-paste("20230219_Test_Sum_POP1EAS", eur_pop, "_Pop2AFR", afr_pop, "_POPuEUR", eas_pop, sep="")
-#     
-#   }
-#   
-#   write.csv(frame_mod, file=paste("~/Desktop/Unknown Ancestry Simulations/Mod_Summix_Sims/", tmp2, ".csv", sep=""))
-#   write.csv(frame_test, file=paste("~/Desktop/Unknown Ancestry Simulations/Mod_Summix_Sims/", tmp3, ".csv", sep=""))
-# #}
-# 
 
 mod_summix <- function(data, reference, observed, pi.start = NA) {
     if(!is.na(pi.start)) {
