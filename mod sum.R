@@ -137,6 +137,26 @@ calc_scaledObj_mod <- function(data, observed, reference) {
   return(objective_scaled)
 }
 
+mod_summix <- function(data, reference, observed, pi.start = NA) {
+    if(!is.na(pi.start)) {
+      sum_res <- mod_summix_calc(data = data, reference = reference, 
+                                observed = observed, pi.start = pi.start)
+    } else {
+      sum_res <- mod_summix_calc(data = data, reference = reference, observed = observed)
+    }
+    new_obj <- calc_scaledObj_mod(data = data, observed = observed, reference = reference)
+    sum_res[1] <- new_obj
+    if(new_obj >= 0.5 & new_obj < 1.5) {
+      print(paste0("CAUTION: Objective/1000SNPs = ", round(new_obj, 4), 
+                   " which is within the moderate fit range"))
+    } else if (new_obj >= 1.5) {
+      print(paste0("WARNING: Objective/1000SNPs = ", round(new_obj, 4), 
+                   " which is above the poor fit threshold"))
+    }
+    return(sum_res)
+  }
+
+
 
 #test this out with a loop!
 #empty data frame
@@ -273,21 +293,3 @@ write.csv(frame_mod, file=paste("~/Desktop/Unknown Ancestry Simulations/Mod_Summ
 write.csv(frame_test, file=paste("~/Desktop/Unknown Ancestry Simulations/Mod_Summix_Sims/", tmp3, ".csv", sep=""))
 }
 
-mod_summix <- function(data, reference, observed, pi.start = NA) {
-    if(!is.na(pi.start)) {
-      sum_res <- mod_summix_calc(data = data, reference = reference, 
-                                observed = observed, pi.start = pi.start)
-    } else {
-      sum_res <- mod_summix_calc(data = data, reference = reference, observed = observed)
-    }
-    new_obj <- calc_scaledObj_mod(data = data, observed = observed, reference = reference)
-    sum_res[1] <- new_obj
-    if(new_obj >= 0.5 & new_obj < 1.5) {
-      print(paste0("CAUTION: Objective/1000SNPs = ", round(new_obj, 4), 
-                   " which is within the moderate fit range"))
-    } else if (new_obj >= 1.5) {
-      print(paste0("WARNING: Objective/1000SNPs = ", round(new_obj, 4), 
-                   " which is above the poor fit threshold"))
-    }
-    return(sum_res)
-  }
