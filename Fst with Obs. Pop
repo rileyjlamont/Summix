@@ -1,0 +1,80 @@
+library(ggplot2)
+library(BEDASSLE)
+
+#read in data set // CHANGE
+chr22_ac_an = read.delim("/Users/rileylamont/Desktop/Unknown Ancestry Simulations/Data Sets/chr22contacan.txt") 
+
+acan_dat <- data.frame(chr22_ac_an)
+
+# indices to sample
+
+tokeep <- sample(x = 389801, size = 100000)
+
+ssample <- acan_dat %>% slice(tokeep) #sample 100k SNPs
+
+#create observed population (equal split)
+
+eur_name = "AF_EUR"
+eur_pop =  33334
+
+eur_geno = t(sapply(ssample[[eur_name]], function(x){x2<-as.numeric(x); rmultinom(1, eur_pop, prob=(c(x2**2, 2*x2*(1-x2), (1-x2)**2)))}))
+eur_dat = data.frame(AC = 2*eur_geno[,1] + eur_geno[,2],
+                     AN = 2*eur_pop) %>% 
+  mutate(AF = AC / AN)
+
+#create observed EAS, 50%
+eas_name = "AF_EAS"
+eas_pop = 33333
+
+eas_geno = t(sapply(ssample[[eas_name]], function(x){x2<-as.numeric(x); rmultinom(1, eas_pop, prob=(c(x2**2, 2*x2*(1-x2), (1-x2)**2)))}))
+eas_dat = data.frame(AC = 2*eas_geno[,1] + eas_geno[,2],
+                     AN = 2*eas_pop) %>% 
+  mutate(AF = AC / AN)
+
+
+#create observed finican, 20%
+afr_name = "AF_AFR"
+afr_pop = 33333
+
+afr_geno = t(sapply(ssample[[afr_name]], function(x){x2<-as.numeric(x); rmultinom(1, afr_pop, prob=(c(x2**2, 2*x2*(1-x2), (1-x2)**2)))}))
+afr_dat = data.frame(AC = 2*afr_geno[,1] + afr_geno[,2],
+                     AN = 2*afr_pop) %>% 
+  
+  mutate(AF = AC / AN)
+
+#combined observed population
+obs_pop_ac_an = data.frame(AC = afr_dat$AC + eur_dat$AC + eas_dat$AC,
+                        AN = afr_dat$AN + eur_dat$AN + eas_dat$AN) 
+
+#creating data frame for AC values
+AC = ssample %>% 
+  select(starts_with('AC_'))
+
+#creating data frame for AN values
+AN = ssample %>% 
+  select(starts_with('AN_'))
+
+#add obs column
+AC$Obs <- obs_pop_ac_an$AC
+AN$Obs <- obs_pop_ac_an$AN
+
+#modifying dataframe names- pulling out "AC" and "AN" so only population names are left
+names(AN) <- gsub("AN_", "", names(AN))
+names(AC) <- gsub("AC_", "", names(AC))
+
+#saving populations names from AN dataframe for later
+label <- names(AN)
+
+
+#dataframes need to be transposed
+
+AN <- t(AN)
+AC <- t(AC)
+pairwiseFST <- calculate.all.pairwise.Fst(allele.counts = AC,
+                                          sample.sizes = AN)
+
+#pasting population names onto pairwise fst dataframe
+rownames(pairwiseFST) <- label
+colnames(pairwiseFST) <- label
+
+print(pairwiseFST)
