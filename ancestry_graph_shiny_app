@@ -1,0 +1,171 @@
+#
+# This is a Shiny web application. You can run the application by clicking
+# the 'Run App' button above.
+#
+# Find out more about building applications with Shiny here:
+#
+#    http://shiny.rstudio.com/
+#
+
+#download packages
+library(shiny)
+library(igraph)
+library(ggplot2)
+library(RColorBrewer)
+library(plotly)
+
+#load data
+#change directory as needed
+#csvs available in readme on github
+
+my_directory = '~/Downloads/'
+barchart_dat <- read.csv(paste0(my_directory, "data_cont_barchart.csv"))
+cont_nodes <- read.csv(paste0(my_directory,"cont_nodes.csv"), header=T, as.is=T)
+cont_links <- read.csv(paste0(my_directory,"cont_edges.csv"), header=T, as.is=T)
+cont_links <- cont_links[order(cont_links$from, cont_links$to),]
+rownames(cont_links) <- NULL
+
+afr_node <- read.csv(paste0(my_directory,"afr_fs_dat.csv"), header=T, as.is=T)
+afr_link <- read.csv(paste0(my_directory, "afr_link_dat.csv"), header=T, as.is=T)
+afr_link <- afr_link[order(afr_link$from, afr_link$to),]
+rownames(afr_link) <- NULL
+
+eas_node <- read.csv(paste0(my_directory,"eas_fs_dat.csv"), header=T, as.is=T)
+eas_link <- read.csv(paste0(my_directory, "eas_link_dat.csv"), header=T, as.is=T)
+eas_link <- eas_link[order(eas_link$from, eas_link$to),]
+rownames(eas_link) <- NULL
+
+eur_node <- read.csv(paste0(my_directory,"eur_fs_dat.csv"), header=T, as.is=T)
+eur_link <- read.csv(paste0(my_directory, "eur_link_dat.csv"), header=T, as.is=T)
+eur_link <- eur_link[order(eur_link$from, eur_link$to),]
+rownames(eur_link) <- NULL
+
+iam_node <- read.csv(paste0(my_directory,"iam_fs_dat.csv"), header=T, as.is=T)
+iam_link <- read.csv(paste0(my_directory, "iam_link_dat.csv"), header=T, as.is=T)
+iam_link <- iam_link[order(iam_link$from, iam_link$to),]
+rownames(iam_link) <- NULL
+
+sas_node <- read.csv(paste0(my_directory,"sas_fs_dat.csv"), header=T, as.is=T)
+sas_link <- read.csv(paste0(my_directory, "sas_link_dat.csv"), header=T, as.is=T)
+sas_link <- sas_link[order(sas_link$from, sas_link$to),]
+rownames(sas_link) <- NULL
+
+
+#ui.R
+
+ui <- fluidPage(
+  titlePanel("A Closer Look at Continental and Fine Scale Ancestries"),
+  sidebarLayout(
+    sidebarPanel(width=3,
+      selectInput(inputId = "anc1",
+                  label = "Select the 1st gnomAD population you would like to focus on:",
+                  choices = c("African" = 'afr', "East Asian" = 'eas', "Non-Finnish European" = 'eur',
+                             "Admixed American" = 'iam',  "South Asian" = 'sas')),
+      selectInput(inputId = "anc2",
+                  label = "Select the 2nd gnomAD population you would like to focus on:",
+                  choices = c( "African" = 'afr', "East Asian" = 'eas', "Non-Finnish European" = 'eur',
+                              "Admixed American" = 'iam',  "South Asian" = 'sas')),
+      sliderInput(inputId = "fst_slider_1", 
+                  label = "Select the fst estimates you would like to view for the 1st gnomAD group.",
+                  min = 0, max = .015, step = .0005, value = .005),
+      sliderInput(inputId = "fst_slider_2", 
+                label = "Select the fst estimates you would like to view for the 2nd gnomAD group.",
+                min = 0, max = .015, step = .0005, value = .005),
+      p(em("As a reminder, a smaller Fst (Fixation Index) value indicates a higher degree of relatedness between two ancestries."))
+    ),
+    mainPanel(
+      splitLayout(
+        verticalLayout(plotOutput("plot1"), plotOutput("plot3")),
+        verticalLayout(plotlyOutput("plot2"), plotOutput("plot4")),
+      )
+      # plotOutput("plot1"),
+      # plotOutput("plot2"),
+      # plotOutput("plot3"),
+      # plotOutput("plot4")
+    )
+  )
+)
+
+server <- function(input, output){
+  cont_net <- graph_from_data_frame(d=cont_links, vertices=cont_nodes, directed=T) 
+  ## output plot 1 
+  V(cont_net)$size <- V(cont_net)$anc.size*30
+  V(cont_net)$label.color <- "black"
+  E(cont_net)$width <- E(cont_net)$weight/1.2
+  pal <- c(AFR = "#66C2A5", EAS = "#FC8D62", EUR ="#8DA0CB", IAM = "#E78AC3", SAS = "#A6D854")
+
+  output$plot1 <- renderPlot({  
+    plot(cont_net, edge.arrow.mode=0, vertex.label = cont_nodes$anc, main = "All 5 Continental Ancestries",
+                         vertex.color = pal[as.numeric(as.factor(vertex_attr(cont_net, "anc")))])})
+  
+  output$plot2 <- renderPlotly({
+    ggplot(barchart_dat, aes(fill=reference, y=value, x=ancestry)) + 
+      geom_bar(position="stack", stat="identity") + scale_fill_brewer(palette="Set2") + xlab("gnomAD Observed Population") +
+      ylab("Percentage") + ggtitle("Fine-Scale Composition of gnomAD Groups") })
+  
+  output$plot3 <- renderPlot({
+    
+    if (input$anc1 == "afr") {anc1_node = afr_node}
+    if (input$anc1 == "afr") {anc1_link = afr_link}
+    if (input$anc1 == "eas") {anc1_node = eas_node}
+    if (input$anc1 == "eas") {anc1_link = eas_link}
+    if (input$anc1 == "eur") {anc1_node = eur_node}
+    if (input$anc1 == "eur") {anc1_link = eur_link}
+    if (input$anc1 == "iam") {anc1_node = iam_node}
+    if (input$anc1 == "iam") {anc1_link = iam_link}
+    if (input$anc1 == "sas") {anc1_node = sas_node}
+    if (input$anc1 == "sas") {anc1_link = sas_link}
+    
+    req(anc1_link)
+    req(anc1_node)
+    
+    anc1_link_trim <- anc1_link %>%
+      dplyr::filter(weight <= input$fst_slider_1)
+    
+    req(anc1_link_trim)    
+    req(anc1_node)
+    
+    anc1_net <- graph_from_data_frame(d = anc1_link_trim, vertices= anc1_node, directed=T) 
+    
+    V(anc1_net)$color = pal[V(anc1_net)$conts]
+    V(anc1_net)$size <- V(anc1_net)$props*100
+    
+    V(anc1_net)$label.color <- "black"
+    E(anc1_net)$width <- 10- 1000*E(anc1_net)$weight
+    plot(anc1_net, edge.arrow.mode=0, vertex.label = anc1_node$X,vertex.label.dist=2.6, main = "Fine Scale Make-up of gnomAD Population #1")
+  })
+  
+  output$plot4 <- renderPlot({
+    observe(input$fst_slider_2)
+    
+    if (input$anc2 == "afr") {anc2_node = afr_node}
+    if (input$anc2 == "afr") {anc2_link = afr_link}
+    if (input$anc2 == "eas") {anc2_node = eas_node}
+    if (input$anc2 == "eas") {anc2_link = eas_link}
+    if (input$anc2 == "eur") {anc2_node = eur_node}
+    if (input$anc2 == "eur") {anc2_link = eur_link}
+    if (input$anc2 == "iam") {anc2_node = iam_node}
+    if (input$anc2 == "iam") {anc2_link = iam_link}
+    if (input$anc2 == "sas") {anc2_node = sas_node}
+    if (input$anc2 == "sas") {anc2_link = sas_link}
+    
+    
+    anc2_link_trim <- anc2_link %>%
+      dplyr::filter(weight <= input$fst_slider_2)
+    
+    req(anc2_link_trim)    
+    req(anc2_node)
+    
+    anc2_net <- graph_from_data_frame(d = anc2_link_trim, vertices= anc2_node, directed=T) 
+    
+    V(anc2_net)$color = pal[V(anc2_net)$conts]
+    V(anc2_net)$size <- V(anc2_net)$props*100
+    V(anc2_net)$label.color <- "black"
+    E(anc2_net)$width <- 10- 1000*E(anc2_net)$weight
+    plot(anc2_net, edge.arrow.mode=0, vertex.label = anc2_node$X,vertex.label.dist=2.6, main = "Fine Scale Make-up of gnomAD Population #2")
+    
+  })
+  
+}
+
+shinyApp(ui = ui, server = server)
